@@ -21,11 +21,26 @@ export function ClubSidebarRight() {
         </CardContent>
       </Card>
 
-      <Card className="rounded-xl">
+      {/* <Card className="rounded-xl">
         <CardContent>
           <Calendar mode="single" selected={date} onSelect={setDate} className="w-full" />
         </CardContent>
-      </Card>
+      </Card> */}
+
+<Card className="rounded-xl">
+  <CardContent className="p-2">
+    <Calendar
+      mode="single"
+      selected={date}
+      onSelect={setDate}
+      className="w-full mx-auto text-sm [&_.rdp-day]:h-8 [&_.rdp-day]:w-8 [&_.rdp-day]:p-0 [&_.rdp-caption]:text-sm [&_.rdp-nav_button]:w-7 [&_.rdp-nav_button]:h-7"
+    />
+  </CardContent>
+</Card>
+
+
+
+
 
       <div>
         <h3 className="text-sm font-semibold mb-2">Announcements</h3>
