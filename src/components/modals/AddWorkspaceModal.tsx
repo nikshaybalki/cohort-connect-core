@@ -12,12 +12,14 @@ interface Workspace {
   description: string;
   flowSteps: string[];
   members: string[];
+  group_id: string;
 }
 
 interface AddWorkspaceModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onAddWorkspace: (workspace: Workspace) => void;
+  selectedGroupId?: string; // Add this to know which group we're creating workspace for
 }
 
 const mockMembers = [
@@ -28,7 +30,7 @@ const mockMembers = [
   { id: "5", name: "David Wilson", initials: "DW", role: "Backend Developer" }
 ];
 
-export function AddWorkspaceModal({ open, onOpenChange, onAddWorkspace }: AddWorkspaceModalProps) {
+export function AddWorkspaceModal({ open, onOpenChange, onAddWorkspace, selectedGroupId }: AddWorkspaceModalProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [workspaceName, setWorkspaceName] = useState("");
   const [description, setDescription] = useState("");
@@ -71,7 +73,10 @@ export function AddWorkspaceModal({ open, onOpenChange, onAddWorkspace }: AddWor
   };
 
   const handleSubmit = async () => {
-    if (!workspaceName.trim() || flowSteps.length === 0 || selectedMembers.length === 0) return;
+    if (!workspaceName.trim() || flowSteps.length === 0 || !selectedGroupId) {
+      console.error('Missing required fields for workspace creation');
+      return;
+    }
 
     setIsLoading(true);
     
@@ -79,7 +84,8 @@ export function AddWorkspaceModal({ open, onOpenChange, onAddWorkspace }: AddWor
       name: workspaceName,
       description,
       flowSteps,
-      members: selectedMembers
+      members: selectedMembers,
+      group_id: selectedGroupId
     };
 
     // Simulate API call
@@ -115,7 +121,7 @@ export function AddWorkspaceModal({ open, onOpenChange, onAddWorkspace }: AddWor
       case 2:
         return flowSteps.length > 0;
       case 3:
-        return selectedMembers.length > 0;
+        return selectedMembers.length >= 0; // Allow creating workspace without selecting members initially
       default:
         return false;
     }

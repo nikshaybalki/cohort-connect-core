@@ -10,15 +10,8 @@ import { AnalysisSection } from "@/components/groups/workspace/AnalysisSection";
 import { CreateGroupModal } from "@/components/modals/CreateGroupModal";
 import { AddWorkspaceModal } from "@/components/modals/AddWorkspaceModal";
 import { Button } from "@/components/ui/button";
-
-interface Workspace {
-  id: string;
-  name: string;
-  description: string;
-  avatar: string;
-  progress: number;
-  flowSteps: string[];
-}
+import { useWorkspaces, type Workspace } from "@/hooks/useWorkspaces";
+import { useGroups } from "@/hooks/useGroups";
 
 const Groups = () => {
   const [openCreateGroup, setOpenCreateGroup] = useState(false);
@@ -28,41 +21,9 @@ const Groups = () => {
   const [currentMode, setCurrentMode] = useState<"group" | "workspace">("group");
   const [rightPanelView, setRightPanelView] = useState<"tasks" | "analysis">("tasks");
   
-  // Workspace data management
-  const [workspaces, setWorkspaces] = useState<Workspace[]>([
-    {
-      id: "1",
-      name: "Project Alpha",
-      description: "Web application development",
-      avatar: "PA",
-      progress: 75,
-      flowSteps: ["Phase 1: Research", "Phase 2: Design", "Phase 3: Development", "Phase 4: Testing", "Phase 5: Deployment"]
-    },
-    {
-      id: "2", 
-      name: "Research Paper",
-      description: "Data analysis and documentation",
-      avatar: "RP",
-      progress: 45,
-      flowSteps: ["Phase 1: Research", "Phase 2: Analysis", "Phase 3: Writing", "Phase 4: Review"]
-    },
-    {
-      id: "3",
-      name: "Mobile App",
-      description: "Cross-platform development",
-      avatar: "MA",
-      progress: 90,
-      flowSteps: ["Phase 1: Planning", "Phase 2: Design", "Phase 3: Development", "Phase 4: Testing"]
-    },
-    {
-      id: "4",
-      name: "Study Notes",
-      description: "Academic collaboration",
-      avatar: "SN",
-      progress: 30,
-      flowSteps: ["Phase 1: Research", "Phase 2: Documentation", "Phase 3: Review"]
-    }
-  ]);
+  // Use real hooks for data management
+  const { groups } = useGroups();
+  const { workspaces, createWorkspace } = useWorkspaces();
 
   const handleModeSwitch = (mode: "group" | "workspace") => {
     setCurrentMode(mode);
@@ -74,29 +35,40 @@ const Groups = () => {
     }
   };
 
-  const handleAddWorkspace = (workspaceData: {
+  const handleAddWorkspace = async (workspaceData: {
     name: string;
     description: string;
     flowSteps: string[];
     members: string[];
+    group_id: string;
   }) => {
-    const newWorkspace: Workspace = {
-      id: Date.now().toString(),
-      name: workspaceData.name,
-      description: workspaceData.description,
-      avatar: workspaceData.name.split(' ').map(word => word[0]).join('').toUpperCase(),
-      progress: 0,
-      flowSteps: workspaceData.flowSteps
-    };
-    
-    setWorkspaces(prev => [...prev, newWorkspace]);
-    setSelectedWorkspace(newWorkspace.id);
-    setCurrentMode("workspace");
+    try {
+      const newWorkspace = await createWorkspace({
+        name: workspaceData.name,
+        description: workspaceData.description,
+        group_id: workspaceData.group_id,
+        workflow_steps: workspaceData.flowSteps
+      });
+      
+      setSelectedWorkspace(newWorkspace.id);
+      setCurrentMode("workspace");
+    } catch (error) {
+      console.error('Failed to create workspace:', error);
+      // Handle error - could show a toast notification
+    }
   };
 
   const selectedWorkspaceData = selectedWorkspace 
     ? workspaces.find(w => w.id === selectedWorkspace) 
     : null;
+
+  // Convert workspace data for components that expect flowSteps
+  const selectedWorkspaceWithFlowSteps = selectedWorkspaceData ? {
+    ...selectedWorkspaceData,
+    avatar: selectedWorkspaceData.avatar || selectedWorkspaceData.name.split(' ').map(word => word[0]).join('').toUpperCase(),
+    progress: selectedWorkspaceData.progress || 0,
+    flowSteps: selectedWorkspaceData.workflow_steps
+  } : null;
 
   return (
     <div>
@@ -119,7 +91,12 @@ const Groups = () => {
             selectedWorkspace={selectedWorkspace}
             onWorkspaceSelect={setSelectedWorkspace}
             onCreateWorkspace={() => setOpenCreateWorkspace(true)}
-            workspaces={workspaces}
+            workspaces={workspaces.map(w => ({
+              ...w,
+              avatar: w.avatar || w.name.split(' ').map(word => word[0]).join('').toUpperCase(),
+              progress: w.progress || 0,
+              flowSteps: w.workflow_steps
+            }))}
           />
         )}
 
@@ -198,9 +175,9 @@ const Groups = () => {
               {/* Panel Content */}
               <div className="flex-1 overflow-hidden">
                 {rightPanelView === "tasks" ? (
-                  <TasksSection selectedWorkspace={selectedWorkspaceData} />
+                  <TasksSection selectedWorkspace={selectedWorkspaceWithFlowSteps} />
                 ) : (
-                  <AnalysisSection selectedWorkspace={selectedWorkspaceData} />
+                  <AnalysisSection selectedWorkspace={selectedWorkspaceWithFlowSteps} />
                 )}
               </div>
             </div>
@@ -225,6 +202,7 @@ const Groups = () => {
         open={openCreateWorkspace} 
         onOpenChange={setOpenCreateWorkspace}
         onAddWorkspace={handleAddWorkspace}
+        selectedGroupId={selectedGroup || groups[0]?.id} // Pass first group if none selected
       />
     </div>
   );

@@ -3,98 +3,37 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Send, Image, File, Video } from "lucide-react";
-
-interface Message {
-  id: string;
-  sender: {
-    name: string;
-    initials: string;
-    avatar?: string;
-  };
-  content: string;
-  timestamp: string;
-}
+import { useWorkspaceMessages } from "@/hooks/useWorkspaceMessages";
+import { useWorkspaces } from "@/hooks/useWorkspaces";
 
 interface WorkspaceChatProps {
   selectedWorkspace: string | null;
 }
 
-// Mock data for workspaces
-const mockWorkspaces = {
-  "1": {
-    name: "Project Alpha",
-    avatar: "PA",
-    description: "Web application development"
-  },
-  "2": {
-    name: "Research Paper",
-    avatar: "RP", 
-    description: "Data analysis and documentation"
-  },
-  "3": {
-    name: "Mobile App",
-    avatar: "MA",
-    description: "Cross-platform development"
-  },
-  "4": {
-    name: "Study Notes",
-    avatar: "SN",
-    description: "Academic collaboration"
-  }
-};
-
-// Mock messages
-const mockMessages: Message[] = [
-  {
-    id: "1",
-    sender: {
-      name: "Sarah Johnson",
-      initials: "SJ"
-    },
-    content: "I've completed the user authentication module. Ready for review!",
-    timestamp: "2:30 PM"
-  },
-  {
-    id: "2", 
-    sender: {
-      name: "Alex Chen",
-      initials: "AC"
-    },
-    content: "Great work Sarah! I'll review it and provide feedback by tomorrow.",
-    timestamp: "2:32 PM"
-  },
-  {
-    id: "3",
-    sender: {
-      name: "Mike Brown",
-      initials: "MB"
-    },
-    content: "Don't forget to update the project documentation with the new features.",
-    timestamp: "2:35 PM"
-  }
-];
-
 export function WorkspaceChat({ selectedWorkspace }: WorkspaceChatProps) {
-  const [messages, setMessages] = useState<Message[]>(mockMessages);
   const [newMessage, setNewMessage] = useState("");
+  const { workspaces } = useWorkspaces();
+  const { 
+    messages, 
+    loading, 
+    sending, 
+    sendMessage, 
+    uploadMedia 
+  } = useWorkspaceMessages(selectedWorkspace);
 
-  const selectedWorkspaceData = selectedWorkspace ? mockWorkspaces[selectedWorkspace as keyof typeof mockWorkspaces] : null;
+  const selectedWorkspaceData = selectedWorkspace 
+    ? workspaces.find(w => w.id === selectedWorkspace) 
+    : null;
 
-  const handleSendMessage = () => {
-    if (!newMessage.trim() || !selectedWorkspace) return;
-
-    const message: Message = {
-      id: Date.now().toString(),
-      sender: {
-        name: "You",
-        initials: "YO"
-      },
-      content: newMessage,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    };
-
-    setMessages(prev => [...prev, message]);
-    setNewMessage("");
+  const handleSendMessage = async () => {
+    if (!selectedWorkspace || !newMessage.trim()) return;
+    
+    try {
+      await sendMessage(newMessage);
+      setNewMessage(""); // Clear input after sending
+    } catch (error) {
+      console.error('Failed to send message:', error);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -104,7 +43,7 @@ export function WorkspaceChat({ selectedWorkspace }: WorkspaceChatProps) {
     }
   };
 
-  const handleFileUpload = (type: "image" | "file" | "video") => {
+  const handleFileUpload = async (type: "image" | "file" | "video") => {
     const input = document.createElement('input');
     input.type = 'file';
     
@@ -120,10 +59,15 @@ export function WorkspaceChat({ selectedWorkspace }: WorkspaceChatProps) {
         break;
     }
 
-    input.onchange = (e) => {
+    input.onchange = async (e) => {
       const target = e.target as HTMLInputElement;
       if (target.files && target.files[0]) {
-        console.log(`Uploading ${type}:`, target.files[0].name);
+        try {
+          const mediaUrl = await uploadMedia(target.files[0]);
+          await sendMessage(`Shared ${type}: ${target.files[0].name}`, [mediaUrl]);
+        } catch (error) {
+          console.error(`Error uploading ${type}:`, error);
+        }
       }
     };
 
@@ -146,8 +90,8 @@ export function WorkspaceChat({ selectedWorkspace }: WorkspaceChatProps) {
       {/* Workspace Header */}
       <div className="workspace-header h-15 bg-white border-b border-gray-200 flex items-center px-5 py-4">
         <div className="workspace-info flex items-center flex-1">
-          <div className="workspace-avatar w-8 h-8 rounded-lg flex items-center justify-center text-white font-semibold text-xs mr-3">
-            {selectedWorkspaceData.avatar}
+          <div className="workspace-avatar w-8 h-8 rounded-lg flex items-center justify-center text-white font-semibold text-xs mr-3 bg-gradient-to-r from-blue-500 to-purple-600">
+            {selectedWorkspaceData.avatar || selectedWorkspaceData.name.split(' ').map(word => word[0]).join('').toUpperCase()}
           </div>
           <div>
             <div className="workspace-name text-base font-semibold text-gray-900">
@@ -162,21 +106,32 @@ export function WorkspaceChat({ selectedWorkspace }: WorkspaceChatProps) {
 
       {/* Chat Messages Area */}
       <div className="chat-messages flex-1 overflow-y-auto p-5 bg-white">
+        {loading && (
+          <div className="text-center py-4 text-gray-500">
+            <p className="text-sm">Loading messages...</p>
+          </div>
+        )}
+        {messages.length === 0 && !loading && (
+          <div className="text-center py-8 text-gray-500">
+            <p className="text-sm">No messages yet</p>
+            <p className="text-xs mt-1">Start the conversation!</p>
+          </div>
+        )}
         {messages.map((message) => (
           <div key={message.id} className="message-item flex mb-4 animate-in slide-in-from-bottom-2 duration-300">
             <Avatar className="message-avatar w-8 h-8 mr-3 flex-shrink-0">
               <AvatarFallback className="text-xs font-semibold">
-                {message.sender.initials}
+                {message.sender.username?.slice(0, 2).toUpperCase() || 'U'}
               </AvatarFallback>
             </Avatar>
             
             <div className="message-content flex-1">
               <div className="message-header flex items-center mb-1">
                 <span className="sender-name text-sm font-semibold text-gray-900 mr-2">
-                  {message.sender.name}
+                  {message.sender.full_name || message.sender.username}
                 </span>
                 <span className="message-time text-xs text-gray-400">
-                  {message.timestamp}
+                  {new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
               <div className="message-text text-sm text-gray-900 leading-relaxed">
@@ -193,9 +148,15 @@ export function WorkspaceChat({ selectedWorkspace }: WorkspaceChatProps) {
           <Input
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            onKeyPress={handleKeyPress}
+            onKeyPress={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSendMessage();
+              }
+            }}
             placeholder="Type a message..."
             className="message-input flex-1 border-none bg-transparent text-sm text-gray-900 placeholder-gray-500 focus:outline-none resize-none"
+            disabled={sending}
           />
           
           <div className="media-buttons flex gap-2 ml-3">
@@ -225,7 +186,7 @@ export function WorkspaceChat({ selectedWorkspace }: WorkspaceChatProps) {
             
             <Button
               onClick={handleSendMessage}
-              disabled={!newMessage.trim()}
+              disabled={!newMessage.trim() || sending}
               className="media-button w-8 h-8 p-0 bg-blue-600 text-white hover:bg-blue-700 rounded-full transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               title="Send message"
             >

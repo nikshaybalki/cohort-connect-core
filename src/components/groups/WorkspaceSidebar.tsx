@@ -1,21 +1,13 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, Search } from "lucide-react";
-
-interface Workspace {
-  id: string;
-  name: string;
-  description: string;
-  avatar: string;
-  progress: number;
-  flowSteps: string[];
-}
+import { type Workspace } from "@/hooks/useWorkspaces";
 
 interface WorkspaceSidebarProps {
   selectedWorkspace: string | null;
   onWorkspaceSelect: (workspaceId: string) => void;
   onCreateWorkspace: () => void;
-  workspaces: Workspace[];
+  workspaces: (Workspace & { avatar: string; progress: number; flowSteps: string[] })[];
 }
 
 export function WorkspaceSidebar({ selectedWorkspace, onWorkspaceSelect, onCreateWorkspace, workspaces }: WorkspaceSidebarProps) {
