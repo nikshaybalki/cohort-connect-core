@@ -20,9 +20,11 @@ export function GroupSidebar({ selectedGroup, onGroupSelect, onCreateGroup }: Gr
     setJoiningGroupId(groupId);
     try {
       await joinGroup(groupId);
-      setShowPublicGroups(false); // Close public groups view after joining
+      // Automatically switch to "My Groups" view after joining
+      setShowPublicGroups(false);
     } catch (error) {
       console.error('Failed to join group:', error);
+      // You might want to show a toast notification here
     } finally {
       setJoiningGroupId(null);
     }

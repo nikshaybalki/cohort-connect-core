@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Send, Image, File, Video, Users, Globe, Lock } from "lucide-react";
 import { useGroupMessages } from "@/hooks/useGroupMessages";
 import { useGroups } from "@/hooks/useGroups";
+import { GroupDetailsSidebar } from "./GroupDetailsSidebar";
 import { formatDistanceToNow } from "date-fns";
 
 interface GroupChatProps {
@@ -13,6 +14,7 @@ interface GroupChatProps {
 
 export function GroupChat({ selectedGroup }: GroupChatProps) {
   const [newMessage, setNewMessage] = useState("");
+  const [isDetailsSidebarOpen, setIsDetailsSidebarOpen] = useState(false);
   const { messages, loading, sending, sendMessage, uploadMedia } = useGroupMessages(selectedGroup);
   const { groups } = useGroups();
 
@@ -112,18 +114,34 @@ export function GroupChat({ selectedGroup }: GroupChatProps) {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-200px)] bg-white rounded-lg border border-gray-200">
+    <div className={`flex flex-col h-[calc(100vh-200px)] bg-white rounded-lg border border-gray-200 relative transition-all duration-300 ${isDetailsSidebarOpen ? 'mr-80' : ''}`}>
       {/* Chat Header */}
       <div className="chat-header h-15 bg-white border-b border-gray-200 flex items-center px-5 py-4">
         <div className="group-chat-info flex items-center flex-1">
-          <div className="group-avatar w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-xs mr-3">
-            {generateAvatar(selectedGroupData.name)}
-          </div>
+          <button
+            onClick={() => setIsDetailsSidebarOpen(true)}
+            className="group-avatar mr-3 hover:scale-105 transition-transform cursor-pointer"
+          >
+            {selectedGroupData.profile_pic_url ? (
+              <img 
+                src={selectedGroupData.profile_pic_url} 
+                alt={selectedGroupData.name}
+                className="w-8 h-8 rounded-lg object-cover border border-gray-200"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-xs">
+                {generateAvatar(selectedGroupData.name)}
+              </div>
+            )}
+          </button>
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <div className="group-chat-name text-base font-semibold text-gray-900">
+              <button
+                onClick={() => setIsDetailsSidebarOpen(true)}
+                className="group-chat-name text-base font-semibold text-gray-900 hover:text-blue-600 transition-colors cursor-pointer"
+              >
                 {selectedGroupData.name}
-              </div>
+              </button>
               {selectedGroupData.visibility === 'private' ? (
                 <Lock className="w-4 h-4 text-gray-400" />
               ) : (
@@ -259,6 +277,13 @@ export function GroupChat({ selectedGroup }: GroupChatProps) {
           </div>
         </div>
       </div>
+      
+      {/* Group Details Sidebar */}
+      <GroupDetailsSidebar
+        groupId={selectedGroup}
+        isOpen={isDetailsSidebarOpen}
+        onClose={() => setIsDetailsSidebarOpen(false)}
+      />
     </div>
   );
 }

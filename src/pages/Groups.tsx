@@ -106,7 +106,7 @@ const Groups = () => {
       <Header onOpenCreate={() => setOpenCreateGroup(true)} />
       <NavBar />
 
-      <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-1 lg:grid-cols-[280px,1fr,400px] gap-6">
+      <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-1 lg:grid-cols-[280px,1fr,400px] gap-6 relative">
         {/* Left Sidebar */}
         {currentMode === "group" ? (
           <GroupSidebar 
