@@ -235,25 +235,40 @@ export function useGroups() {
 
       console.log('Adding user as admin member to group:', group.id);
 
-      // Try to add creator as admin member, but don't fail if it errors
+      // Try to add creator as admin member using the helper function
       try {
-        const { error: memberError } = await supabase
-          .from('group_members')
-          .insert({
-            group_id: group.id,
-            user_id: user.id,
-            role: 'admin'
+        const { data: memberResult, error: memberError } = await supabase
+          .rpc('add_group_member', {
+            target_group_id: group.id,
+            target_user_id: user.id,
+            member_role: 'admin'
           });
 
-        console.log('Member creation result. Error:', memberError);
+        console.log('Member creation result:', memberResult, 'Error:', memberError);
 
         if (memberError) {
-          console.warn('Member creation failed, but group was created:', memberError);
-          // Don't throw here - group was created successfully
+          console.warn('Member creation failed using helper function:', memberError);
+          // Try direct insert as fallback
+          const { error: fallbackError } = await supabase
+            .from('group_members')
+            .insert({
+              group_id: group.id,
+              user_id: user.id,
+              role: 'admin'
+            });
+          
+          if (fallbackError) {
+            console.warn('Direct insert also failed:', fallbackError);
+          } else {
+            console.log('Direct insert succeeded as fallback');
+          }
+        } else {
+          console.log('Helper function succeeded:', memberResult);
         }
       } catch (memberErr) {
-        console.warn('Member creation threw exception:', memberErr);
-        // Don't throw here - group was created successfully
+        console.warn('Both methods failed:', memberErr);
+        // Group was still created successfully, but creator might not be a member
+        // This is now handled by the updated RLS policy
       }
 
       console.log('Refreshing groups lists...');
